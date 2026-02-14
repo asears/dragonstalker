@@ -8,13 +8,22 @@ Navigate through a maze filled with dangerous enemies while managing your ammuni
 
 ### Features
 
-- **Authentic Maze Design**: Based on the original Night Stalker layout
-- **Multiple Enemy Types**:
-  - 🕷️ Spider (Magenta) - Slow but persistent
-  - 🦇 Bat (Blue) - Fast and erratic
-  - 🤖 Robot (Red) - Patrol patterns
+- **Authentic Maze Design**: Based on the original Night Stalker layout with bumpy wall textures
+- **Spider Web Graphics**: Decorative spider web in the top-left corner
+- **Bunker with Bars**: Central safe zone with vertical bar graphics and entrance
+- **Left Door System**: Robot enemy enters through door on the left wall
+- **Projectile Bullets**: Black bullets with white glowing dots fire in player's direction
+- **6 Detailed Enemy Types**:
+  - 🕷️ **Spider** (Magenta) - 100pts - Slow but persistent with animated legs
+  - 🦂 **Scorpion** (Blue) - 150pts - Medium speed with curved tail
+  - 🐍 **Snake** (Red) - 175pts - Slow S-pattern movement
+  - 🦇 **Bat** (Brown) - 200pts - Fast with wing-flap animation
+  - 🐉 **Dragon** (Pink) - 250pts - Fast with charge attacks
+  - 🤖 **Robot** (Gray) - 300pts - Enters randomly from left door, aggressive hunter
+- **Animated Player**: Running animation with moving legs and directional gun
 - **Safe Bunker**: Reload bullets in the central bunker
 - **Progressive Difficulty**: Each level increases the challenge
+- **Enhanced Graphics**: Bumpy wall textures, animated sprites, detailed enemies
 - **No Sound**: Silent gameplay focusing on strategy
 
 ## Files
@@ -34,18 +43,23 @@ Navigate through a maze filled with dangerous enemies while managing your ammuni
 ### Controls
 
 - **Arrow Keys**: Move your character
-- **Space Bar**: Fire weapon
+- **Space Bar**: Fire weapon (shoots in direction you're facing)
 - **R Key**: Restart game
 
 ### Objective
 
 - Avoid or destroy enemies
-- Collect bullets in the bunker (center safe zone)
+- Collect bullets in the bunker (center safe zone with bars)
 - Survive as long as possible
+- Watch for the robot entering from the left door!
+- Bullets fire as projectiles in the direction you're facing
 - Earn points by defeating enemies:
   - Spider: 100 points
-  - Bat: 150 points
-  - Robot: 200 points
+  - Scorpion: 150 points
+  - Snake: 175 points
+  - Bat: 200 points
+  - Dragon: 250 points
+  - Robot: 300 points
   - Level completion: 500 points
 
 ## Technical Details
@@ -59,19 +73,29 @@ The `nightstalker.bas` file contains the original game logic written in Intelliv
 - Collision detection
 - AI routines for enemy behavior
 
-### WASM Container
-
-The HTML file includes a JavaScript-based interpreter that emulates the Intellivision BASIC environment:
-- Canvas-based rendering
-- Sprite extraction from the original game image
+### WASM Containern advanced JavaScript-based interpreter that emulates the Intellivision BASIC environment:
+- High-performance Canvas 2D rendering with animation
+- Sprite system with frame-based animation
+- Textured wall rendering with bumpy edges
+- Spider web decorative graphics
+- Bunker with vertical bar visualization
 - Keyboard input handling
+- Game state management with frame counters
+- Authentic color palette from original Intellivision
+- Enhanced enemy AI with type-specific behaviors
 - Game state management
 - Authentic color palette from original Intellivision
-
-## Sprite Design
-
-All sprites are designed based on the provided Night Stalker game image:
-- **Player**: White stick figure character
+animated stick figure with running animation and directional gun
+- **Walls**: Dark green maze structure with bumpy, organic texture
+- **Paths**: Bright yellow corridors
+- **Spider Web**: Decorative web pattern in corner
+- **Bunker**: Light green safe zone with 5 vertical bars and bottom entrance
+- **Enemies**: Fully animated with unique behaviors:
+  - Spider: 8-legged with white eyes
+  - Scorpion: Blue with claws and curved tail with yellow stinger
+  - Snake: Red S-shaped body with animated sway
+  - Bat: Brown with wing-flap animation
+  - Dragon: Pink with horns, tail, and red eyes
 - **Walls**: Dark green maze structure
 - **Paths**: Yellow corridors
 - **Bunker**: Light green safe zone with striped entrance

@@ -88,14 +88,15 @@
     <div id="controls">
         <p><strong>CONTROLS:</strong></p>
         <p>Arrow Keys: Move | Space: Fire | R: Restart</p>
-        <p>Objective: Survive the maze, shoot enemies, collect bullets in the bunker!</p>
+        <p>Enemies: 🕷️Spider(100) 🦂Scorpion(150) 🐍Snake(175) 🦇Bat(200) 🐉Dragon(250) 🤖Robot(300)</p>
+        <p>⚠️ Watch for the robot entering from the left door!</p>
         <button onclick="startGame()">START GAME</button>
         <button onclick="resetGame()">RESET</button>
     </div>
 
     <script>
         // Night Stalker WASM Container Emulation
-        // JavaScript-based Intellivision BASIC interpreter with enhanced graphics
+        // Enhanced JavaScript-based Intellivision BASIC interpreter
         
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -110,7 +111,10 @@
             lives: 5,
             bullets: 5,
             level: 1,
-            player: { x: 160, y: 120, size: 8, color: '#fff', direction: 'down', animFrame: 0, moving: false },
+            player: { 
+                x: 160, y: 120, size: 8, color: '#fff', 
+                direction: 'down', animFrame: 0, moving: false 
+            },
             enemies: [
                 { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0 },
                 { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0 },
@@ -118,13 +122,16 @@
                 { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0 },
                 { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0 }
             ],
+            robot: { x: -50, y: 200, size: 10, color: '#888', type: 'robot', alive: false, animFrame: 0, entering: false },
+            activeBullets: [],
             bunker: { x: 140, y: 100, width: 40, height: 40 },
+            leftDoor: { x: 8, y: 190, width: 6, height: 30, open: false },
             keys: {},
             gameOver: false,
             running: false
         };
         
-        // Maze walls from the image
+        // Maze walls from the image - enhanced for better layout
         const walls = [
             // Outer walls
             {x: 0, y: 0, width: 320, height: 8},
@@ -132,13 +139,19 @@
             {x: 0, y: 0, width: 8, height: 240},
             {x: 312, y: 0, width: 8, height: 240},
             
-            // Internal maze walls (approximated from image)
-            {x: 32, y: 32, width: 64, height: 40},
-            {x: 224, y: 32, width: 64, height: 56},
-            {x: 32, y: 140, width: 48, height: 64},
-            {x: 240, y: 140, width: 48, height: 72},
-            {x: 120, y: 48, width: 8, height: 96},
-            {x: 192, y: 48, width: 8, height: 96}
+            // Internal maze walls (more detailed from image)
+            {x: 25, y: 25, width: 60, height: 45},
+            {x: 220, y: 25, width: 70, height: 60},
+            {x: 25, y: 165, width: 50, height: 55},
+            {x: 235, y: 160, width: 55, height: 60},
+            {x: 115, y: 45, width: 10, height: 100},
+            {x: 185, y: 45, width: 10, height: 100},
+            {x: 50, y: 100, width: 45, height: 12},
+            {x: 210, y: 105, width: 45, height: 12},
+            {x: 100, y: 175, width: 110, height: 12},
+            // Left wall with door gap
+            {x: 0, y: 8, width: 8, height: 182},
+            {x: 0, y: 220, width: 8, height: 12}
         ];
         
         // Input handling
@@ -159,6 +172,8 @@
         
         function drawSprite(x, y, color, type, animFrame, direction) {
             ctx.save();
+            animFrame = animFrame || 0;
+            direction = direction || 'down';
             
             if (type === 'player') {
                 // Animated player sprite with running animation
@@ -196,36 +211,113 @@
                 // Body
                 ctx.fillRect(x - 3, y - 3, 6, 6);
                 // Legs (4 pairs)
-                for (let i = -ee0';
-            ctx.fillRect(0, 0, 320, 240);
-            
-            // Draw walls with bumpy texture
-            walls.forEach(wall => {
-                drawBumpyWall(wall.x, wall.y, wall.width, wall.height);
-            });
-            
-            // Draw spider web in top-left corner
-            drawSpiderWeb(50, 50, 40);
-            
-            // Bunker (greenish safe zone with vertical bars)
-            ctx.fillStyle = 'rgba(100, 150, 100, 0.5)';
-            ctx.fillRect(gameState.bunker.x, gameState.bunker.y, 
-                        gameState.bunker.width, gameState.bunker.height);
-            
-            // Bunker bars (vertical)
-            ctx.fillStyle = '#2a5';
-            const barCount = 5;
-            const barSpacing = gameState.bunker.width / (barCount + 1);
-            for (let i = 1; i <= barCount; i++) {
-                const barX = gameState.bunker.x + i * barSpacing;
-                ctx.fillRect(barX - 1, gameState.bunker.y + 5, 2, gameState.bunker.height - 10);
+                for (let i = -1; i <= 1; i++) {
+                    ctx.fillRect(x - 6, y + i * 2, 3, 1);
+                    ctx.fillRect(x + 3, y + i * 2, 3, 1);
+                }
+                // Eyes
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(x - 2, y - 2, 1, 1);
+                ctx.fillRect(x + 1, y - 2, 1, 1);
+                
+            } else if (type === 'scorpion') {
+                // Blue scorpion with tail
+                ctx.fillStyle = color;
+                // Body
+                ctx.fillRect(x - 4, y - 2, 8, 4);
+                // Claws
+                ctx.fillRect(x - 6, y - 3, 2, 2);
+                ctx.fillRect(x + 4, y - 3, 2, 2);
+                // Tail segments (curved)
+                ctx.fillRect(x + 3, y - 4, 2, 2);
+                ctx.fillRect(x + 4, y - 6, 2, 2);
+                // Stinger
+                ctx.fillStyle = '#ff0';
+                ctx.fillRect(x + 5, y - 7, 1, 1);
+                
+            } else if (type === 'snake') {
+                // Red snake (S-shaped)
+                ctx.fillStyle = color;
+                const sway = Math.sin(animFrame * 0.2) * 2;
+                // Head
+                ctx.fillRect(x - 2, y - 4 + sway, 4, 3);
+                // Body segments
+                ctx.fillRect(x - 1 + sway, y - 1, 3, 2);
+                ctx.fillRect(x - sway, y + 1, 3, 2);
+                ctx.fillRect(x + sway, y + 3, 3, 2);
+                // Tongue
+                ctx.fillStyle = '#f00';
+                ctx.fillRect(x - 3, y - 4 + sway, 1, 1);
+                
+            } else if (type === 'bat') {
+                // Brown bat with wing flap animation
+                ctx.fillStyle = color;
+                const wingFlap = animFrame % 4 < 2 ? 0 : 2;
+                // Body
+                ctx.fillRect(x - 2, y - 2, 4, 4);
+                // Head
+                ctx.fillRect(x - 1, y - 4, 2, 2);
+                // Wings
+                ctx.fillRect(x - 6 - wingFlap, y - 1, 4, 2);
+                ctx.fillRect(x + 2 + wingFlap, y - 1, 4, 2);
+                // Ears
+                ctx.fillRect(x - 2, y - 5, 1, 1);
+                ctx.fillRect(x + 1, y - 5, 1, 1);
+                
+            } else if (type === 'dragon') {
+                // Pink dragon
+                ctx.fillStyle = color;
+                // Head
+                ctx.fillRect(x - 3, y - 4, 6, 5);
+                // Horns
+                ctx.fillRect(x - 4, y - 6, 2, 2);
+                ctx.fillRect(x + 2, y - 6, 2, 2);
+                // Body
+                ctx.fillRect(x - 2, y + 1, 4, 4);
+                // Tail
+                ctx.fillRect(x + 2, y + 3, 3, 2);
+                // Eyes
+                ctx.fillStyle = '#f00';
+                ctx.fillRect(x - 2, y - 3, 1, 1);
+                ctx.fillRect(x + 1, y - 3, 1, 1);
+            } else if (type === 'robot') {
+                // Gray robot
+                ctx.fillStyle = color;
+                // Body
+                ctx.fillRect(x - 4, y - 5, 8, 10);
+                // Head
+                ctx.fillRect(x - 3, y - 7, 6, 3);
+                // Arms
+                ctx.fillRect(x - 6, y - 2, 2, 4);
+                ctx.fillRect(x + 4, y - 2, 2, 4);
+                // Legs
+                ctx.fillRect(x - 3, y + 5, 2, 3);
+                ctx.fillRect(x + 1, y + 5, 2, 3);
+                // Eyes (red)
+                ctx.fillStyle = '#f00';
+                ctx.fillRect(x - 2, y - 6, 1, 1);
+                ctx.fillRect(x + 1, y - 6, 1, 1);
+                // Antenna
+                ctx.fillStyle = color;
+                ctx.fillRect(x - 1, y - 9, 2, 2);
             }
             
-            // Bunker entrance (bottom opening)
-            ctx.fillStyle = '#ee0';
-            ctx.fillRect(gameState.bunker.x + 10, 
-                        gameState.bunker.y + gameState.bunker.height - 3, 
-                        gameState.bunker.width - 20, 3);
+            ctx.restore();
+        }
+        
+        function drawBullet(x, y) {
+            // Black bullet with white glowing dots
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x - 2, y - 2, 4, 4);
+            
+            // Glowing white dots
+            ctx.fillStyle = '#fff';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#fff';
+            ctx.fillRect(x - 1, y - 1, 2, 2);
+            ctx.fillRect(x - 2, y, 1, 1);
+            ctx.fillRect(x + 1, y, 1, 1);
+            ctx.shadowBlur = 0;
         }
         
         function drawBumpyWall(x, y, width, height) {
@@ -281,32 +373,85 @@
             for (let i = 1; i <= circles; i++) {
                 ctx.beginPath();
                 ctx.arc(cx, cy, (size / circles) * i, 0, Math.PI * 2);
-                ctx.stroke(+ 4, y - 6, 2, 2);
-                // Stinger
-                ctx.fillStyle = '#ff0';
-                ctx.fillRect(x + 5, y - 7, 1, 1);
+                ctx.stroke();
+            }
+        }
+        
+        function drawMaze() {
+            // Background (yellow paths from image)
+            ctx.fillStyle = '#ee0';
+            ctx.fillRect(0, 0, 320, 240);
+            
+            // Draw walls with bumpy texture
+            walls.forEach(wall => {
+                drawBumpyWall(wall.x, wall.y, wall.width, wall.height);
+            });
+            
+            // Draw spider web in top-left corner
+            drawSpiderWeb(50, 50, 40);
+            
+            // Bunker (greenish safe zone with vertical bars)
+            ctx.fillStyle = 'rgba(100, 150, 100, 0.5)';
+            ctx.fillRect(gameState.bunker.x, gameState.bunker.y, 
+                        gameState.bunker.width, gameState.bunker.height);
+            
+            // Bunker bars (vertical)
+            ctx.fillStyle = '#2a5';
+            const barCount = 5;
+            const barSpacing = gameState.bunker.width / (barCount + 1);
+            for (let i = 1; i <= barCount; i++) {
+                const barX = gameState.bunker.x + i * barSpacing;
+                ctx.fillRect(barX - 1, gameState.bunker.y + 5, 2, gameState.bunker.height - 10);
+            }
+            
+            // Bunker entrance (bottom opening)
+            ctx.fillStyle = '#ee0';
+            ctx.fillRect(gameState.bunker.x + 10, 
+                        gameState.bunker.y + gameState.bunker.height - 3, 
+                        gameState.bunker.width - 20, 3);
+            
+            // Draw left door
+            drawLeftDoor();
+        }
+        
+        function drawLeftDoor() {
+            const door = gameState.leftDoor;
+            
+            if (door.open) {
+                // Open door - dark opening
+                ctx.fillStyle = '#000';
+                ctx.fillRect(door.x, door.y, door.width, door.height);
                 
-            } else if (type === 'snake') {
-                // Red snake (S-shaped)
-                ctx.fillStyle = color;
-                const sway = Math.sin(animFrame * 0.2) * 2;
-                // Head
-                ctx.fillRect(x - 2, y - 4 + sway, 4, 3);
-                // Body segments
-                ctx.fillRect(x - 1 + sway, y - 1, 3, 2);
-                ctx.fillRect(x - sway, y + 1, 3, 2);
-                ctx.fillRect(x + sway, y + 3, 3, 2);
-                // Tongue
-                ctx.fillStyle = '#f00';
-                ctx.fillRect(x - 3, y - 4 + sway, 1, 1);
+                // Door edges
+                ctx.fillStyle = '#444';
+                ctx.fillRect(door.x, door.y - 2, door.width, 2);
+                ctx.fillRect(door.x, door.y + door.height, door.width, 2);
+            } else {
+                // Closed door - matches wall
+                ctx.fillStyle = '#063';
+                ctx.fillRect(door.x, door.y, door.width, door.height);
                 
-            } else if (type === 'bat') {
-                // Brown bat with wing flap animation
-                ctx.fillStyle = color;
-                const wingFlap = animFrame % 4 < 2 ? 0 : 2;
-                // Body
-                ctx.fillRect(x - 2, y - 2, 4, 4);
-                // Head
+                // Door outline
+                ctx.strokeStyle = '#085';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(door.x, door.y, door.width, door.height);
+            }
+        }
+        
+        function drawHUD() {
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px "Courier New"';
+            ctx.fillText(`${gameState.score}`, 135, 18);
+            
+            ctx.font = '12px "Courier New"';
+            ctx.fillText(`LIVES: ${gameState.lives}`, 240, 18);
+            ctx.fillText(`BULLETS: ${Math.floor(gameState.bullets)}`, 10, 18);
+        }
+        
+        function updatePlayer() {
+            const speed = 2;
+            let newX = gameState.player.x;
+            let newY = gameState.player.y;
             let moving = false;
             
             if (gameState.keys['ArrowUp']) {
@@ -336,24 +481,149 @@
             if (moving) {
                 gameState.player.animFrame++;
             }
-                ctx.fillRect(x - 2, y - 5, 1, 1);
-                ctx.fillRect(x + 1, y - 5, 1, 1);
+            
+            // Check wall collisions
+            if (!checkWallCollision(newX, newY, gameState.player.size)) {
+                gameState.player.x = newX;
+                gameState.player.y = newY;
+            }
+            
+            // Keep in bounds
+            gameState.player.x = Math.max(16, Math.min(304, gameState.player.x));
+            gameState.player.y = Math.max(16, Math.min(224, gameState.player.y));
+            
+            // Check if in bunker (reload bullets)
+            if (isInBunker(gameState.player)) {
+                if (gameState.bullets < 10) {
+                    gameState.bullets = Math.min(10, gameState.bullets + 0.1);
+                }
+            }
+        }
+        
+        function checkWallCollision(x, y, size) {
+            for (let wall of walls) {
+                if (x - size < wall.x + wall.width &&
+                    x + size > wall.x &&
+                    y - size < wall.y + wall.height &&
+                    y + size > wall.y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        function isInBunker(entity) {
+            return entity.x > gameState.bunker.x &&
+                   entity.x < gameState.bunker.x + gameState.bunker.width &&
+                   entity.y > gameState.bunker.y &&
+                   entity.y < gameState.bunker.y + gameState.bunker.height;
+        }
+        
+        function updateRobot() {
+            const robot = gameState.robot;
+            
+            // Random chance to spawn robot
+            if (!robot.alive && !robot.entering && Math.random() > 0.99) {
+                robot.entering = true;
+                robot.alive = true;
+                robot.x = -50;
+                robot.y = 205;
+                gameState.leftDoor.open = true;
+            }
+            
+            // Robot enters from left door
+            if (robot.entering && robot.alive) {
+                robot.x += 1.5;
+                if (robot.x > 40) {
+                    robot.entering = false;
+                    gameState.leftDoor.open = false;
+                }
+            }
+            
+            // Robot AI - hunt player
+            if (robot.alive && !robot.entering) {
+                robot.animFrame++;
+                const speed = 1.2;
                 
-            } else if (type === 'dragon') {
-                // Pink dragon
-                ctx.fillStyle = color;
-                // Head
-                ctx.fillRect(x - 3, y - 4, 6, 5);
-                // Horns
-                ctx.fillRect(x - 4, y - 6, 2, 2);
-                ctx.fillRect(x + 2, y - 6, 2, 2);
-                // Body
-                ctx.fillRect(x - 2, y + 1, 4, 4);
-                // Tail
-                ctx.fillRect(x + 2, y + 3, 3, 2);
-                // Eyes
-                ctx.fillStyle = '#f00';
-                ctx.fillRect(x - 2, y - 3, 1, 1);
+                const dx = gameState.player.x - robot.x;
+                const dy = gameState.player.y - robot.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 0) {
+                    let newX = robot.x + (dx / dist) * speed;
+                    let newY = robot.y + (dy / dist) * speed;
+                    
+                    if (!checkWallCollision(newX, newY, robot.size)) {
+                        robot.x = newX;
+                        robot.y = newY;
+                    }
+                }
+                
+                // Check collision with player
+                if (dist < 12 && !isInBunker(gameState.player)) {
+                    playerHit();
+                }
+            }
+        }
+        
+        function updateBullets() {
+            // Update active bullets
+            gameState.activeBullets = gameState.activeBullets.filter(bullet => {
+                // Move bullet
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                bullet.life--;
+                
+                // Remove if off screen or expired
+                if (bullet.x < 0 || bullet.x > 320 || bullet.y < 0 || bullet.y > 240 || bullet.life <= 0) {
+                    return false;
+                }
+                
+                // Check wall collision
+                if (checkWallCollision(bullet.x, bullet.y, 2)) {
+                    return false;
+                }
+                
+                // Check enemy hits
+                for (let enemy of gameState.enemies) {
+                    if (!enemy.alive) continue;
+                    const dist = Math.sqrt(
+                        Math.pow(bullet.x - enemy.x, 2) + 
+                        Math.pow(bullet.y - enemy.y, 2)
+                    );
+                    if (dist < 8) {
+                        enemy.alive = false;
+                        const points = {
+                            'spider': 100, 'scorpion': 150, 'snake': 175,
+                            'bat': 200, 'dragon': 250
+                        };
+                        gameState.score += points[enemy.type] || 100;
+                        return false;
+                    }
+                }
+                
+                // Check robot hit
+                if (gameState.robot.alive) {
+                    const dist = Math.sqrt(
+                        Math.pow(bullet.x - gameState.robot.x, 2) + 
+                        Math.pow(bullet.y - gameState.robot.y, 2)
+                    );
+                    if (dist < 10) {
+                        gameState.robot.alive = false;
+                        gameState.robot.entering = false;
+                        gameState.score += 300;
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+        }
+        
+        function updateEnemies() {
+            gameState.enemies.forEach(enemy => {
+                if (!enemy.alive) return;
+                
                 // Animate enemies
                 enemy.animFrame++;
                 
@@ -384,102 +654,6 @@
                             newX += (dx / dist) * 3;
                             newY += (dy / dist) * 3;
                         }
-            // Walls (dark green from image)
-            ctx.fillStyle = '#060';
-            walls.forEach(wall => {
-                ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
-            });
-            
-            // Bunker (greenish safe zone with entrance)
-            ctx.fillStyle = '#4a4';
-            ctx.fillRect(gameState.bunker.x, gameState.bunker.y, 
-                        gameState.bunker.width, gameState.bunker.height);
-            
-            // Bunker entrance (striped pattern)
-            ctx.fillStyle = '#6b6';
-            for (let i = 0; i < 5; i++) {
-                ctx.fillRect(gameState.bunker.x + i * 5, 
-                           gameState.bunker.y + gameState.bunker.height - 4, 
-                           3, 4);
-            }
-        }
-        
-        function drawHUD() {
-            ctx.fillStyle = '#fff';
-            ctx.font = '16px "Courier New"';
-            ctx.fillText(`SCORE: ${gameState.score}`, 10, 20);
-            ctx.fillText(`LIVES: ${gameState.lives}`, 240, 20);
-            ctx.fillText(`BULLETS: ${gameState.bullets}`, 10, 235);
-        }
-        
-        function updatePlayer() {
-            const speed = 2;
-            let newX = gameState.player.x;
-            let newY = gameState.player.y;
-            
-            if (gameState.keys['ArrowUp']) newY -= speed;
-            if (gameState.keys['ArrowDown']) newY += speed;
-            if (gameState.keys['ArrowLeft']) newX -= speed;
-            if (gameState.keys['ArrowRight']) newX += speed;
-            
-            // Check wall collisions
-            if (!checkWallCollision(newX, newY, gameState.player.size)) {
-                gameState.player.x = newX;
-                gameState.player.y = newY;
-            }
-            
-            // Keep in bounds
-            gameState.player.x = Math.max(16, Math.min(304, gameState.player.x));
-            gameState.player.y = Math.max(16, Math.min(224, gameState.player.y));
-            
-            // Check if in bunker (reload bullets)
-            if (isInBunker(gameState.player)) {
-                if (gameState.bullets < 10) {
-                    gameState.bullets = Math.min(10, gameState.bullets + 0.1);
-                }
-            }
-        }
-         with increased difficulty
-            gameState.enemies = [
-                { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0 },
-                { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0 },
-                { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0 },
-                { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0 },
-                { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0
-                    y - size < wall.y + wall.height &&
-                    y + size > wall.y) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        
-        function isInBunker(entity) {
-            return entity.x > gameState.bunker.x &&
-                   entity.x < gameState.bunker.x + gameState.bunker.width &&
-                   entity.y > gameState.bunker.y &&
-                   entity.y < gameState.bunker.y + gameState.bunker.height;
-        }
-        
-        function updateEnemies() {
-            gameState.enemies.forEach(enemy => {
-                if (!enemy.alive) return;
-                
-                const speed = enemy.type === 'bat' ? 1.5 : 1;
-                , 
-                      gameState.player.animFrame, gameState.player.direction);
-            
-            gameState.enemies.forEach(enemy => {
-                if (enemy.alive) {
-                    drawSprite(enemy.x, enemy.y, enemy.color, enemy.type, enemy.animFrame);
-                }
-            });
-            
-            drawHUD();
-            
-            // Increment global frame counter
-            frameCount++   let newX = enemy.x + (dx / dist) * speed;
-                        let newY = enemy.y + (dy / dist) * speed;
                         
                         if (!checkWallCollision(newX, newY, enemy.size)) {
                             enemy.x = newX;
@@ -492,49 +666,41 @@
                 const dist = Math.sqrt(
                     Math.pow(enemy.x - gameState.player.x, 2) +
                     Math.pow(enemy.y - gameState.player.y, 2)
-                );, direction: 'down', animFrame: 0, moving: false },
-                enemies: [
-                    { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0 },
-                    { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0 },
-                    { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0 },
-                    { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0 },
-                    { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0 }
-                ],
-                bunker: { x: 140, y: 100, width: 40, height: 40 },
-                keys: {},
-                gameOver: false,
-                running: false
-            };
-            frameCount = 0
-            gameState.bullets -= 1;
-            
-            // Simple bullet mechanic - hit closest enemy in line of sight
-            let closest = null;
-            let minDist = Infinity;
-            
-            gameState.enemies.forEach(enemy => {
-                if (!enemy.alive) return;
-                
-                const dist = Math.sqrt(
-                    Math.pow(enemy.x - gameState.player.x, 2) +
-                    Math.pow(enemy.y - gameState.player.y, 2)
                 );
                 
-                if (dist < 100 && dist < minDist) {
-                    minDist = dist;
-                    closest = enemy;
+                if (dist < 12 && !isInBunker(gameState.player)) {
+                    playerHit();
                 }
             });
+        }
+        
+        function fireBullet() {
+            if (gameState.bullets < 1) return;
             
-            if (closest) {
-                closest.alive = false;
-                gameState.score += closest.type === 'spider' ? 100 :
-                                  closest.type === 'bat' ? 150 : 200;
-                
-                // Check if all enemies defeated
-                if (gameState.enemies.every(e => !e.alive)) {
-                    nextLevel();
-                }
+            gameState.bullets -= 1;
+            
+            // Create bullet projectile
+            const speed = 5;
+            let vx = 0, vy = 0;
+            
+            // Direction based on player direction
+            if (gameState.player.direction === 'up') vy = -speed;
+            else if (gameState.player.direction === 'down') vy = speed;
+            else if (gameState.player.direction === 'left') vx = -speed;
+            else if (gameState.player.direction === 'right') vx = speed;
+            else vy = -speed; // default up
+            
+            gameState.activeBullets.push({
+                x: gameState.player.x,
+                y: gameState.player.y,
+                vx: vx,
+                vy: vy,
+                life: 100
+            });
+            
+            // Check if all enemies defeated
+            if (gameState.enemies.every(e => !e.alive) && !gameState.robot.alive) {
+                nextLevel();
             }
         }
         
@@ -557,12 +723,18 @@
             gameState.score += 500;
             gameState.bullets = 10;
             
-            // Respawn enemies
+            // Respawn enemies with increased difficulty
             gameState.enemies = [
-                { x: 40, y: 40, size: 8, color: '#f0f', type: 'spider', alive: true },
-                { x: 280, y: 40, size: 8, color: '#00f', type: 'bat', alive: true },
-                { x: 280, y: 200, size: 8, color: '#f00', type: 'robot', alive: true }
+                { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0 },
+                { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0 },
+                { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0 },
+                { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0 },
+                { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0 }
             ];
+            
+            gameState.robot.alive = false;
+            gameState.robot.entering = false;
+            gameState.leftDoor.open = false;
             
             statusDiv.textContent = `Level ${gameState.level}!`;
         }
@@ -579,18 +751,35 @@
             // Update game state
             updatePlayer();
             updateEnemies();
+            updateRobot();
+            updateBullets();
+            
+            // Draw bullets
+            gameState.activeBullets.forEach(bullet => {
+                drawBullet(bullet.x, bullet.y);
+            });
             
             // Draw entities
             drawSprite(gameState.player.x, gameState.player.y, 
-                      gameState.player.color, 'player');
+                      gameState.player.color, 'player', 
+                      gameState.player.animFrame, gameState.player.direction);
             
             gameState.enemies.forEach(enemy => {
                 if (enemy.alive) {
-                    drawSprite(enemy.x, enemy.y, enemy.color, enemy.type);
+                    drawSprite(enemy.x, enemy.y, enemy.color, enemy.type, enemy.animFrame);
                 }
             });
             
+            // Draw robot
+            if (gameState.robot.alive) {
+                drawSprite(gameState.robot.x, gameState.robot.y, 
+                          gameState.robot.color, 'robot', gameState.robot.animFrame);
+            }
+            
             drawHUD();
+            
+            // Increment global frame counter
+            frameCount++;
             
             requestAnimationFrame(gameLoop);
         }
@@ -610,17 +799,26 @@
                 lives: 5,
                 bullets: 5,
                 level: 1,
-                player: { x: 160, y: 120, size: 8, color: '#fff' },
+                player: { 
+                    x: 160, y: 120, size: 8, color: '#fff', 
+                    direction: 'down', animFrame: 0, moving: false 
+                },
                 enemies: [
-                    { x: 40, y: 40, size: 8, color: '#f0f', type: 'spider', alive: true },
-                    { x: 280, y: 40, size: 8, color: '#00f', type: 'bat', alive: true },
-                    { x: 280, y: 200, size: 8, color: '#f00', type: 'robot', alive: true }
+                    { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0 },
+                    { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0 },
+                    { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0 },
+                    { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0 },
+                    { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0 }
                 ],
-                bunker: { x: 148, y: 108, width: 24, height: 24 },
+                robot: { x: -50, y: 200, size: 10, color: '#888', type: 'robot', alive: false, animFrame: 0, entering: false },
+                activeBullets: [],
+                bunker: { x: 140, y: 100, width: 40, height: 40 },
+                leftDoor: { x: 8, y: 190, width: 6, height: 30, open: false },
                 keys: {},
                 gameOver: false,
                 running: false
             };
+            frameCount = 0;
             statusDiv.textContent = 'Game Reset - Press START to play';
         }
         
