@@ -1,0 +1,23 @@
+{
+  "name": "dragonstalker",
+  "version": "1.0.0",
+  "description": "Night Stalker clone in Intellivision BASIC with WASM container",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8080 -o",
+    "docker:build": "docker build -t dragonstalker .",
+    "docker:run": "docker run -p 8080:80 dragonstalker"
+  },
+  "keywords": [
+    "intellivision",
+    "night-stalker",
+    "retro",
+    "game",
+    "wasm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
