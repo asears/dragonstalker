@@ -87,9 +87,9 @@
     
     <div id="controls">
         <p><strong>CONTROLS:</strong></p>
-        <p>Arrow Keys: Move | Space: Fire | R: Restart</p>
-        <p>Enemies: 🕷️Spider(100) 🦂Scorpion(150) 🐍Snake(175) 🦇Bat(200) 🐉Dragon(250) 🤖Robot(300)</p>
-        <p>⚠️ Watch for the robot entering from the left door!</p>
+        <p>Arrow Keys: Move | Z: Fire Yellow Disc | R: Restart</p>
+        <p>Enemies: 🕷️Spider(100)+Webs 🦂Scorpion(150) 🐍Snake(175) 🦇Bat(200) 🐉Dragon(250) 🤖Robot(300)+Discs</p>
+        <p>⚠️ Watch for the robot patrolling and shooting red discs!</p>
         <button onclick="startGame()">START GAME</button>
         <button onclick="resetGame()">RESET</button>
     </div>
@@ -102,6 +102,135 @@
         const ctx = canvas.getContext('2d');
         const statusDiv = document.getElementById('status');
         
+        // Audio context for sound effects
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+        }
+        
+        // Early 80s arcade sound effects using Web Audio API
+        function playShootSound() {
+            if (!audioCtx) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+        
+        function playHitSound() {
+            if (!audioCtx) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+            
+            gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.2);
+        }
+        
+        function playKillSound() {
+            if (!audioCtx) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.3);
+        }
+        
+        function playLevelUpSound() {
+            if (!audioCtx) return;
+            const notes = [262, 330, 392, 523]; // C, E, G, C (major chord)
+            notes.forEach((freq, i) => {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = freq;
+                
+                const startTime = audioCtx.currentTime + i * 0.1;
+                gainNode.gain.setValueAtTime(0.2, startTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
+                
+                oscillator.start(startTime);
+                oscillator.stop(startTime + 0.15);
+            });
+        }
+        
+        function playGameOverSound() {
+            if (!audioCtx) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.8);
+            
+            gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.8);
+        }
+        
+        function playRobotShootSound() {
+            if (!audioCtx) return;
+            // Robotic "zing" sound
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(1200, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.15);
+            
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.15);
+        }
+        
         // Animation frame counter
         let frameCount = 0;
         
@@ -109,23 +238,23 @@
         let gameState = {
             score: 1000,
             lives: 5,
-            bullets: 5,
+            bullets: 999,
             level: 1,
+            startDelay: 120,
             player: { 
                 x: 160, y: 120, size: 8, color: '#fff', 
                 direction: 'down', animFrame: 0, moving: false 
             },
             enemies: [
-                { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0 },
-                { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0 },
-                { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0 },
-                { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0 },
-                { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0 }
+                { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0, wanderTarget: null, lastShot: 0 },
+                { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0, wanderTarget: null },
+                { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0, wanderTarget: null },
+                { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0, direction: 1 },
+                { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0, wanderTarget: null }
             ],
-            robot: { x: -50, y: 200, size: 10, color: '#888', type: 'robot', alive: false, animFrame: 0, entering: false },
+            robot: { x: 160, y: 120, size: 10, color: '#888', type: 'robot', alive: false, animFrame: 0, wanderTarget: null },
             activeBullets: [],
             bunker: { x: 140, y: 100, width: 40, height: 40 },
-            leftDoor: { x: 8, y: 190, width: 6, height: 30, open: false },
             keys: {},
             gameOver: false,
             running: false
@@ -149,15 +278,14 @@
             {x: 50, y: 100, width: 45, height: 12},
             {x: 210, y: 105, width: 45, height: 12},
             {x: 100, y: 175, width: 110, height: 12},
-            // Left wall with door gap
-            {x: 0, y: 8, width: 8, height: 182},
-            {x: 0, y: 220, width: 8, height: 12}
+            // Left wall
+            {x: 0, y: 8, width: 8, height: 232}
         ];
         
         // Input handling
         document.addEventListener('keydown', (e) => {
             gameState.keys[e.key] = true;
-            if (e.key === ' ') {
+            if (e.key === 'z' || e.key === 'Z') {
                 e.preventDefault();
                 fireBullet();
             }
@@ -305,28 +433,98 @@
             ctx.restore();
         }
         
-        function drawBullet(x, y) {
-            // Black bullet with white glowing dots
-            ctx.fillStyle = '#000';
-            ctx.fillRect(x - 2, y - 2, 4, 4);
-            
-            // Glowing white dots
-            ctx.fillStyle = '#fff';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#fff';
-            ctx.fillRect(x - 1, y - 1, 2, 2);
-            ctx.fillRect(x - 2, y, 1, 1);
-            ctx.fillRect(x + 1, y, 1, 1);
-            ctx.shadowBlur = 0;
+        function drawBullet(bullet) {
+            if (bullet.isWeb) {
+                // Spider web projectile (grey/white)
+                ctx.save();
+                
+                // Web strands
+                ctx.strokeStyle = '#ccc';
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#ccc';
+                
+                ctx.beginPath();
+                ctx.moveTo(bullet.x - 3, bullet.y - 3);
+                ctx.lineTo(bullet.x + 3, bullet.y + 3);
+                ctx.moveTo(bullet.x + 3, bullet.y - 3);
+                ctx.lineTo(bullet.x - 3, bullet.y + 3);
+                ctx.stroke();
+                
+                // Center dot
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            } else if (bullet.isRobotBullet) {
+                // Red robot disc (slower and more threatening)
+                ctx.save();
+                
+                // Outer glow
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#f00';
+                
+                // Disc outer ring
+                ctx.fillStyle = '#f00';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner darker center
+                ctx.fillStyle = '#800';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Bright center dot
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            } else {
+                // Yellow Tron disc with glow (player bullets)
+                ctx.save();
+                
+                // Outer glow
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ff0';
+                
+                // Disc outer ring
+                ctx.fillStyle = '#ff0';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner darker center
+                ctx.fillStyle = '#cc0';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Bright center dot
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            }
         }
         
         function drawBumpyWall(x, y, width, height) {
-            // Base wall color (dark green)
-            ctx.fillStyle = '#063';
+            // Base wall color (black)
+            ctx.fillStyle = '#000';
             ctx.fillRect(x, y, width, height);
             
-            // Add bumpy texture
-            ctx.fillStyle = '#041';
+            // Add bumpy texture (dark grey)
+            ctx.fillStyle = '#111';
             const bumpSize = 3;
             
             // Bumps on edges
@@ -348,8 +546,8 @@
                 }
             }
             
-            // Highlight edge
-            ctx.fillStyle = '#085';
+            // Highlight edge (very dark grey)
+            ctx.fillStyle = '#222';
             ctx.fillRect(x, y, 1, height);
             ctx.fillRect(x, y, width, 1);
         }
@@ -378,8 +576,8 @@
         }
         
         function drawMaze() {
-            // Background (yellow paths from image)
-            ctx.fillStyle = '#ee0';
+            // Background (blue paths)
+            ctx.fillStyle = '#0066cc';
             ctx.fillRect(0, 0, 320, 240);
             
             // Draw walls with bumpy texture
@@ -387,16 +585,27 @@
                 drawBumpyWall(wall.x, wall.y, wall.width, wall.height);
             });
             
+            // Draw door gaps in corner boxes
+            ctx.fillStyle = '#0066cc';
+            // Top-left box door (bottom)
+            ctx.fillRect(55, 70, 15, 8);
+            // Top-right box door (bottom) 
+            ctx.fillRect(245, 85, 15, 8);
+            // Bottom-left box door (top)
+            ctx.fillRect(50, 165, 15, 8);
+            // Bottom-right box door (top)
+            ctx.fillRect(260, 160, 15, 8);
+            
             // Draw spider web in top-left corner
             drawSpiderWeb(50, 50, 40);
             
-            // Bunker (greenish safe zone with vertical bars)
-            ctx.fillStyle = 'rgba(100, 150, 100, 0.5)';
+            // Bunker (grey cell with vertical bars)
+            ctx.fillStyle = '#666';
             ctx.fillRect(gameState.bunker.x, gameState.bunker.y, 
                         gameState.bunker.width, gameState.bunker.height);
             
-            // Bunker bars (vertical)
-            ctx.fillStyle = '#2a5';
+            // Bunker bars (vertical - darker grey)
+            ctx.fillStyle = '#333';
             const barCount = 5;
             const barSpacing = gameState.bunker.width / (barCount + 1);
             for (let i = 1; i <= barCount; i++) {
@@ -404,35 +613,32 @@
                 ctx.fillRect(barX - 1, gameState.bunker.y + 5, 2, gameState.bunker.height - 10);
             }
             
-            // Bunker entrance (bottom opening)
-            ctx.fillStyle = '#ee0';
+            // Bunker entrance (bottom opening - blue)
+            ctx.fillStyle = '#0066cc';
             ctx.fillRect(gameState.bunker.x + 10, 
                         gameState.bunker.y + gameState.bunker.height - 3, 
                         gameState.bunker.width - 20, 3);
-            
-            // Draw left door
-            drawLeftDoor();
         }
         
         function drawLeftDoor() {
             const door = gameState.leftDoor;
             
             if (door.open) {
-                // Open door - dark opening
-                ctx.fillStyle = '#000';
+                // Open door - blue opening (path visible)
+                ctx.fillStyle = '#0066cc';
                 ctx.fillRect(door.x, door.y, door.width, door.height);
                 
-                // Door edges
-                ctx.fillStyle = '#444';
+                // Door edges (dark)
+                ctx.fillStyle = '#333';
                 ctx.fillRect(door.x, door.y - 2, door.width, 2);
                 ctx.fillRect(door.x, door.y + door.height, door.width, 2);
             } else {
-                // Closed door - matches wall
-                ctx.fillStyle = '#063';
+                // Closed door - matches wall (black)
+                ctx.fillStyle = '#000';
                 ctx.fillRect(door.x, door.y, door.width, door.height);
                 
                 // Door outline
-                ctx.strokeStyle = '#085';
+                ctx.strokeStyle = '#222';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(door.x, door.y, door.width, door.height);
             }
@@ -445,7 +651,7 @@
             
             ctx.font = '12px "Courier New"';
             ctx.fillText(`LIVES: ${gameState.lives}`, 240, 18);
-            ctx.fillText(`BULLETS: ${Math.floor(gameState.bullets)}`, 10, 18);
+            ctx.fillText(`∞ AMMO`, 10, 18);
         }
         
         function updatePlayer() {
@@ -491,13 +697,6 @@
             // Keep in bounds
             gameState.player.x = Math.max(16, Math.min(304, gameState.player.x));
             gameState.player.y = Math.max(16, Math.min(224, gameState.player.y));
-            
-            // Check if in bunker (reload bullets)
-            if (isInBunker(gameState.player)) {
-                if (gameState.bullets < 10) {
-                    gameState.bullets = Math.min(10, gameState.bullets + 0.1);
-                }
-            }
         }
         
         function checkWallCollision(x, y, size) {
@@ -522,45 +721,102 @@
         function updateRobot() {
             const robot = gameState.robot;
             
+            // Don't spawn robot during start delay
+            if (gameState.startDelay > 0) return;
+            
             // Random chance to spawn robot
-            if (!robot.alive && !robot.entering && Math.random() > 0.99) {
-                robot.entering = true;
+            if (!robot.alive && Math.random() > 0.995) {
                 robot.alive = true;
-                robot.x = -50;
-                robot.y = 205;
-                gameState.leftDoor.open = true;
+                robot.x = 160;
+                robot.y = 120;
+                robot.wanderTarget = null;
+                robot.lastShot = 0;
             }
             
-            // Robot enters from left door
-            if (robot.entering && robot.alive) {
-                robot.x += 1.5;
-                if (robot.x > 40) {
-                    robot.entering = false;
-                    gameState.leftDoor.open = false;
-                }
-            }
-            
-            // Robot AI - hunt player
-            if (robot.alive && !robot.entering) {
+            // Robot AI - patrol and hunt player
+            if (robot.alive) {
                 robot.animFrame++;
                 const speed = 1.2;
                 
+                // Robot shooting (every 90 frames = ~1.5 seconds)
+                if (frameCount - robot.lastShot > 90) {
+                    const dx = gameState.player.x - robot.x;
+                    const dy = gameState.player.y - robot.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 150) { // Shoot if player is close enough
+                        const speed = 2; // Slower than player discs
+                        const vx = (dx / dist) * speed;
+                        const vy = (dy / dist) * speed;
+                        
+                        gameState.activeBullets.push({
+                            x: robot.x,
+                            y: robot.y,
+                            vx: vx,
+                            vy: vy,
+                            life: 120,
+                            isRobotBullet: true
+                        });
+                        
+                        playRobotShootSound();
+                        robot.lastShot = frameCount;
+                    }
+                }
+                
+                // Decide between hunting player and wandering
                 const dx = gameState.player.x - robot.x;
                 const dy = gameState.player.y - robot.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                const distToPlayer = Math.sqrt(dx * dx + dy * dy);
                 
-                if (dist > 0) {
-                    let newX = robot.x + (dx / dist) * speed;
-                    let newY = robot.y + (dy / dist) * speed;
+                let targetX, targetY;
+                
+                // If player is close, hunt them
+                if (distToPlayer < 100) {
+                    targetX = gameState.player.x;
+                    targetY = gameState.player.y;
+                    robot.wanderTarget = null;
+                } else {
+                    // Wander through maze - pick random targets
+                    if (!robot.wanderTarget || Math.random() > 0.98) {
+                        robot.wanderTarget = {
+                            x: 50 + Math.random() * 220,
+                            y: 50 + Math.random() * 140
+                        };
+                    }
+                    targetX = robot.wanderTarget.x;
+                    targetY = robot.wanderTarget.y;
+                }
+                
+                const dx2 = targetX - robot.x;
+                const dy2 = targetY - robot.y;
+                const dist = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                
+                if (dist > 5) {
+                    let newX = robot.x + (dx2 / dist) * speed;
+                    let newY = robot.y + (dy2 / dist) * speed;
                     
+                    // Try moving in both X and Y
                     if (!checkWallCollision(newX, newY, robot.size)) {
                         robot.x = newX;
                         robot.y = newY;
+                    } else {
+                        // Try just X
+                        if (!checkWallCollision(newX, robot.y, robot.size)) {
+                            robot.x = newX;
+                        } 
+                        // Try just Y
+                        else if (!checkWallCollision(robot.x, newY, robot.size)) {
+                            robot.y = newY;
+                        }
+                        // Stuck - pick new wander target
+                        else {
+                            robot.wanderTarget = null;
+                        }
                     }
                 }
                 
                 // Check collision with player
-                if (dist < 12 && !isInBunker(gameState.player)) {
+                if (distToPlayer < 12 && !isInBunker(gameState.player)) {
                     playerHit();
                 }
             }
@@ -584,7 +840,33 @@
                     return false;
                 }
                 
-                // Check enemy hits
+                // Robot bullets can hit player
+                if (bullet.isRobotBullet) {
+                    const dist = Math.sqrt(
+                        Math.pow(bullet.x - gameState.player.x, 2) + 
+                        Math.pow(bullet.y - gameState.player.y, 2)
+                    );
+                    if (dist < 8 && !isInBunker(gameState.player)) {
+                        playerHit();
+                        return false;
+                    }
+                    return true;
+                }
+                
+                // Web bullets can hit player
+                if (bullet.isWeb) {
+                    const dist = Math.sqrt(
+                        Math.pow(bullet.x - gameState.player.x, 2) + 
+                        Math.pow(bullet.y - gameState.player.y, 2)
+                    );
+                    if (dist < 8 && !isInBunker(gameState.player)) {
+                        playerHit();
+                        return false;
+                    }
+                    return true;
+                }
+                
+                // Player bullets can hit enemies
                 for (let enemy of gameState.enemies) {
                     if (!enemy.alive) continue;
                     const dist = Math.sqrt(
@@ -598,11 +880,12 @@
                             'bat': 200, 'dragon': 250
                         };
                         gameState.score += points[enemy.type] || 100;
+                        playKillSound();
                         return false;
                     }
                 }
                 
-                // Check robot hit
+                // Player bullets can hit robot
                 if (gameState.robot.alive) {
                     const dist = Math.sqrt(
                         Math.pow(bullet.x - gameState.robot.x, 2) + 
@@ -610,8 +893,8 @@
                     );
                     if (dist < 10) {
                         gameState.robot.alive = false;
-                        gameState.robot.entering = false;
                         gameState.score += 300;
+                        playKillSound();
                         return false;
                     }
                 }
@@ -621,44 +904,97 @@
         }
         
         function updateEnemies() {
+            // Don't move enemies during start delay
+            if (gameState.startDelay > 0) {
+                gameState.startDelay--;
+                return;
+            }
+            
             gameState.enemies.forEach(enemy => {
                 if (!enemy.alive) return;
                 
                 // Animate enemies
                 enemy.animFrame++;
                 
-                // Different speeds and behaviors per enemy type
-                let speed = 1;
-                if (enemy.type === 'bat') speed = 1.8;
-                else if (enemy.type === 'scorpion') speed = 1.3;
-                else if (enemy.type === 'dragon') speed = 1.5;
-                else if (enemy.type === 'snake') speed = 0.8;
-                
-                // Simple AI - move toward player with type-specific behavior
-                if (Math.random() > 0.1) {
+                // Spider shooting webs
+                if (enemy.type === 'spider' && frameCount - enemy.lastShot > 120) {
                     const dx = gameState.player.x - enemy.x;
                     const dy = gameState.player.y - enemy.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     
-                    if (dist > 0) {
-                        let newX = enemy.x + (dx / dist) * speed;
-                        let newY = enemy.y + (dy / dist) * speed;
+                    if (dist < 120) { // Shoot if player is close
+                        const speed = 1.5; // Slow web
+                        const vx = (dx / dist) * speed;
+                        const vy = (dy / dist) * speed;
                         
-                        // Snake moves in S pattern
-                        if (enemy.type === 'snake') {
-                            newX += Math.sin(enemy.animFrame * 0.1) * 2;
-                        }
+                        gameState.activeBullets.push({
+                            x: enemy.x,
+                            y: enemy.y,
+                            vx: vx,
+                            vy: vy,
+                            life: 150,
+                            isWeb: true
+                        });
                         
-                        // Dragon occasionally charges
-                        if (enemy.type === 'dragon' && Math.random() > 0.95) {
-                            newX += (dx / dist) * 3;
-                            newY += (dy / dist) * 3;
-                        }
+                        enemy.lastShot = frameCount;
+                    }
+                }
+                
+                // Different movement patterns per enemy type
+                if (enemy.type === 'bat') {
+                    // Bat moves up and down
+                    const speed = 1;
+                    enemy.y += speed * enemy.direction;
+                    
+                    // Bounce off walls or change direction
+                    if (enemy.y < 30 || enemy.y > 210 || checkWallCollision(enemy.x, enemy.y + speed * enemy.direction, enemy.size)) {
+                        enemy.direction *= -1;
+                    }
+                } else {
+                    // Other enemies patrol slowly through maze
+                    const speed = 0.5; // Slow patrol speed
+                    
+                    // Wander through maze - pick random targets
+                    if (!enemy.wanderTarget || Math.random() > 0.995) {
+                        enemy.wanderTarget = {
+                            x: 50 + Math.random() * 220,
+                            y: 50 + Math.random() * 140
+                        };
+                    }
+                    
+                    if (enemy.wanderTarget) {
+                        const dx = enemy.wanderTarget.x - enemy.x;
+                        const dy = enemy.wanderTarget.y - enemy.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
                         
-                        if (!checkWallCollision(newX, newY, enemy.size)) {
-                            enemy.x = newX;
-                            enemy.y = newY;
+                        if (dist > 5) {
+                            let newX = enemy.x + (dx / dist) * speed;
+                            let newY = enemy.y + (dy / dist) * speed;
+                            
+                            // Try moving in both X and Y
+                            if (!checkWallCollision(newX, newY, enemy.size)) {
+                                enemy.x = newX;
+                                enemy.y = newY;
+                            } else {
+                                // Try just X
+                                if (!checkWallCollision(newX, enemy.y, enemy.size)) {
+                                    enemy.x = newX;
+                                } 
+                                // Try just Y
+                                else if (!checkWallCollision(enemy.x, newY, enemy.size)) {
+                                    enemy.y = newY;
+                                }
+                                // Stuck - pick new wander target
+                                else {
+                                    enemy.wanderTarget = null;
+                                }
+                            }
                         }
+                    }
+                    
+                    // Snake S-pattern overlay
+                    if (enemy.type === 'snake') {
+                        enemy.x += Math.sin(enemy.animFrame * 0.1) * 0.5;
                     }
                 }
                 
@@ -675,12 +1011,10 @@
         }
         
         function fireBullet() {
-            if (gameState.bullets < 1) return;
-            
-            gameState.bullets -= 1;
+            // Unlimited ammo - no check needed
             
             // Create bullet projectile
-            const speed = 5;
+            const speed = 6;
             let vx = 0, vy = 0;
             
             // Direction based on player direction
@@ -698,43 +1032,52 @@
                 life: 100
             });
             
+            playShootSound();
+            
             // Check if all enemies defeated
-            if (gameState.enemies.every(e => !e.alive) && !gameState.robot.alive) {
+            if (gameState.enemies.every(e => !e.alive)) {
                 nextLevel();
             }
         }
         
         function playerHit() {
             gameState.lives -= 1;
+            playHitSound();
             
             if (gameState.lives <= 0) {
                 gameState.gameOver = true;
+                playGameOverSound();
                 statusDiv.textContent = `GAME OVER! Final Score: ${gameState.score}`;
             } else {
-                // Reset positions
-                gameState.player.x = 160;
-                gameState.player.y = 120;
-                gameState.bullets = 5;
+                // Return player to center cell (bunker)
+                gameState.player.x = gameState.bunker.x + gameState.bunker.width / 2;
+                gameState.player.y = gameState.bunker.y + gameState.bunker.height / 2;
+                gameState.player.direction = 'down';
+                
+                // Brief pause before enemies resume
+                gameState.startDelay = 60;
             }
         }
         
         function nextLevel() {
             gameState.level += 1;
             gameState.score += 500;
-            gameState.bullets = 10;
+            gameState.startDelay = 120;
+            playLevelUpSound();
             
             // Respawn enemies with increased difficulty
             gameState.enemies = [
-                { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0 },
-                { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0 },
-                { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0 },
-                { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0 },
-                { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0 }
+                { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0, wanderTarget: null, lastShot: 0 },
+                { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0, wanderTarget: null },
+                { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0, wanderTarget: null },
+                { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0, direction: 1 },
+                { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0, wanderTarget: null }
             ];
             
             gameState.robot.alive = false;
-            gameState.robot.entering = false;
-            gameState.leftDoor.open = false;
+            gameState.robot.wanderTarget = null;
+            gameState.robot.lastShot = 0;
+            gameState.robot.lastShot = 0;
             
             statusDiv.textContent = `Level ${gameState.level}!`;
         }
@@ -756,7 +1099,7 @@
             
             // Draw bullets
             gameState.activeBullets.forEach(bullet => {
-                drawBullet(bullet.x, bullet.y);
+                drawBullet(bullet);
             });
             
             // Draw entities
@@ -786,6 +1129,7 @@
         
         function startGame() {
             if (!gameState.running) {
+                initAudio();
                 gameState.running = true;
                 gameState.gameOver = false;
                 statusDiv.textContent = 'Game Running - Good Luck!';
@@ -797,23 +1141,23 @@
             gameState = {
                 score: 1000,
                 lives: 5,
-                bullets: 5,
+                bullets: 999,
                 level: 1,
+                startDelay: 120,
                 player: { 
                     x: 160, y: 120, size: 8, color: '#fff', 
                     direction: 'down', animFrame: 0, moving: false 
                 },
                 enemies: [
-                    { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0 },
-                    { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0 },
-                    { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0 },
-                    { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0 },
-                    { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0 }
+                    { x: 70, y: 60, size: 8, color: '#f0f', type: 'spider', alive: true, animFrame: 0, wanderTarget: null, lastShot: 0 },
+                    { x: 280, y: 100, size: 8, color: '#00f', type: 'scorpion', alive: true, animFrame: 0, wanderTarget: null },
+                    { x: 280, y: 200, size: 8, color: '#f00', type: 'snake', alive: true, animFrame: 0, wanderTarget: null },
+                    { x: 70, y: 200, size: 8, color: '#8b4513', type: 'bat', alive: true, animFrame: 0, direction: 1 },
+                    { x: 280, y: 60, size: 8, color: '#ff1493', type: 'dragon', alive: true, animFrame: 0, wanderTarget: null }
                 ],
-                robot: { x: -50, y: 200, size: 10, color: '#888', type: 'robot', alive: false, animFrame: 0, entering: false },
+                robot: { x: 160, y: 120, size: 10, color: '#888', type: 'robot', alive: false, animFrame: 0, wanderTarget: null, lastShot: 0 },
                 activeBullets: [],
                 bunker: { x: 140, y: 100, width: 40, height: 40 },
-                leftDoor: { x: 8, y: 190, width: 6, height: 30, open: false },
                 keys: {},
                 gameOver: false,
                 running: false
